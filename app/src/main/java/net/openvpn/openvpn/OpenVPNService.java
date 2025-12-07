@@ -1562,7 +1562,7 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
                 String profile_name = prof.get_name();
                 this.pwds.remove("auth", profile_name);
                 this.pwds.remove("pk", profile_name);
-                refresh_profile_list();
+                refresh_data(null);
                 gen_event(EV_PRIO_INVISIBLE, "PROFILE_IMPORT_SUCCESS", profile_name, profile_name);
                 return true;
             } catch (IOException e) {
@@ -1588,7 +1588,7 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
             if (deleteFile(profile.get_filename())) {
                 this.pwds.remove("auth", profile_name);
                 this.pwds.remove("pk", profile_name);
-                refresh_profile_list();
+                refresh_data(null);
                 gen_event(EV_PRIO_INVISIBLE, "PROFILE_DELETE_SUCCESS", profile.get_name());
                 return true;
             }
@@ -1622,7 +1622,7 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
         objArr[MSG_EVENT] = new_profile_name + ".ovpn";
         String to_path = String.format("%s/%s", objArr);
         if (FileUtil.renameFile(from_path, to_path)) {
-            refresh_profile_list();
+            refresh_data(null);
             Profile new_profile = this.profile_list.get_profile_by_name(new_profile_name);
             if (new_profile == null) {
                 Log.d(TAG, "PROFILE_RENAME_FAILED: post-rename profile get");
@@ -2037,7 +2037,7 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
 
     public ProfileList get_profile_list() {
         if (this.profile_list == null) {
-            refresh_profile_list();
+            refresh_data(null);
         }
         return this.profile_list;
     }

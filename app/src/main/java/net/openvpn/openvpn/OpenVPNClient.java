@@ -411,7 +411,7 @@ public class OpenVPNClient extends OpenVPNClientBase implements OnClickListener,
     protected void onResume() {
         super.onResume();
         if (mBoundService != null) {
-            mBoundService.refresh_profile_list();
+            mBoundService.refresh_data(null);
         }
         // Add session validation
         validateSession();
@@ -1160,7 +1160,7 @@ public class OpenVPNClient extends OpenVPNClientBase implements OnClickListener,
             if (!is_active()) {
                 clearProfileSpinner();
                 Promo selectedPromo = (Promo) promo_spinner.getSelectedItem();
-                mBoundService.refresh_profile_list(selectedPromo != null ? selectedPromo.getId() : null);
+                mBoundService.refresh_data(selectedPromo != null ? selectedPromo.getId() : null);
             }
         }
     }
