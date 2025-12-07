@@ -1,0 +1,123 @@
+package net.openvpn.openvpn;
+
+import android.app.Activity;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.AsyncTask;
+import android.os.Bundle;
+import android.provider.Settings;
+import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Toast;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
+// Make sure you have copied WebViewHelper.java into your project!
+// import net.openvpn.openvpn.WebViewHelper; 
+
+public class LoginActivity extends Activity {
+
+    public static final String PREFS_NAME = "login_prefs";
+    public static final String LOGGED_IN_KEY = "loggedIn";
+
+    private EditText loginCodeEditText;
+    private Button loginButton;
+    private SharedPreferences prefs;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        if (prefs.getBoolean(LOGGED_IN_KEY, false)) {
+            // User is already logged in, go to the main activity
+            Intent intent = new Intent(LoginActivity.this, OpenVPNClient.class);
+            startActivity(intent);
+            finish();
+            return; // Skip the rest of onCreate
+        }
+
+        setContentView(R.layout.activity_login);
+
+        loginCodeEditText = findViewById(R.id.login_code);
+        loginButton = findViewById(R.id.login_button);
+
+        loginButton.setOnClickListener(new View.OnClickListener() {
+				@Override
+				public void onClick(View v) {
+					String loginCode = loginCodeEditText.getText().toString();
+					if (loginCode.isEmpty()) {
+						Toast.makeText(LoginActivity.this, "Please enter a login code.", Toast.LENGTH_SHORT).show();
+						return;
+					}
+					String deviceId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+					final String urlString = "https://web.cornerstone-its-mobiledata.com/api.php?login_code=" + loginCode + "&device_id=" + deviceId;
+
+					// Disable the button to prevent multiple clicks while working
+					loginButton.setEnabled(false);
+					Toast.makeText(LoginActivity.this, "Attempting to connect...", Toast.LENGTH_SHORT).show();
+
+					new LoginTask().execute(urlString);
+				}
+			});
+    }
+	private class LoginTask extends AsyncTask<String, Void, String> {
+
+        @Override
+        protected String doInBackground(String... params) {
+            String urlString = params[0];
+
+            Log.d("LoginTask", "URL: " + urlString);
+
+            try {
+                URL url = new URL(urlString);
+                HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+                try {
+                    BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+                    StringBuilder stringBuilder = new StringBuilder();
+                    String line;
+                    while ((line = bufferedReader.readLine()) != null) {
+                        stringBuilder.append(line).append("\n");
+                    }
+                    bufferedReader.close();
+                    return stringBuilder.toString();
+                } finally {
+                    urlConnection.disconnect();
+                }
+            } catch (Exception e) {
+                Log.e("LoginTask", "Error during login HTTP request", e);
+                return "Error: " + e.getMessage(); // Return the error message
+            }
+        }
+		@Override
+        protected void onPostExecute(String result) {
+            // Always re-enable the button
+            loginButton.setEnabled(true);
+
+            if (result != null && result.trim().startsWith("success")) {
+                // Login successful, save the login status
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putBoolean(LOGGED_IN_KEY, true);
+                editor.putString("login_code", loginCodeEditText.getText().toString());
+                editor.putString("device_id", Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID));
+                editor.apply();
+
+                // Login successful, proceed to the main activity
+                Toast.makeText(LoginActivity.this, "Login Successful!", Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(LoginActivity.this, OpenVPNClient.class);
+                startActivity(intent);
+                finish();
+            } else {
+                // Login failed, show an error message
+                Toast.makeText(LoginActivity.this, "Login failed. Result: " + result, Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+}
+
+

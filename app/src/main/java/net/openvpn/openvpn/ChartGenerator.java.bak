@@ -1,0 +1,92 @@
+package net.openvpn.openvpn;
+
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.util.TypedValue;
+import android.view.View;
+
+import com.github.mikephil.charting.charts.BarChart;
+import com.github.mikephil.charting.components.XAxis;
+import com.github.mikephil.charting.components.YAxis;
+import com.github.mikephil.charting.data.BarData;
+import com.github.mikephil.charting.data.BarDataSet;
+import com.github.mikephil.charting.data.BarEntry;
+import com.github.mikephil.charting.formatter.IndexAxisValueFormatter;
+import com.github.mikephil.charting.formatter.ValueFormatter;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class ChartGenerator {
+
+    private static int getThemeColor(Context context, int attr) {
+        TypedValue typedValue = new TypedValue();
+        if (context.getTheme().resolveAttribute(attr, typedValue, true)) {
+            return typedValue.data;
+        }
+        return Color.BLACK; // Fallback color
+    }
+
+    public static Bitmap generateChartBitmap(Context context, long download, long upload) {
+        BarChart chart = new BarChart(context);
+        int width = (int) context.getResources().getDimension(R.dimen.chart_width);
+        int height = (int) context.getResources().getDimension(R.dimen.chart_height);
+
+        chart.setBackgroundColor(Color.TRANSPARENT);
+        chart.layout(0, 0, width, height);
+
+        List<BarEntry> entries = new ArrayList<>();
+        entries.add(new BarEntry(0f, download));
+        entries.add(new BarEntry(1f, upload));
+
+        int downloadColor = context.getColor(R.color.chart_download_color);
+        int uploadColor = context.getColor(R.color.chart_upload_color);
+        int textColor = getThemeColor(context, android.R.attr.textColorPrimary);
+        int gridColor = getThemeColor(context, android.R.attr.textColorSecondary);
+
+        BarDataSet dataSet = new BarDataSet(entries, "Data Usage");
+        dataSet.setColors(downloadColor, uploadColor);
+        dataSet.setValueTextColor(textColor);
+        dataSet.setValueTextSize(12f);
+
+        BarData barData = new BarData(dataSet);
+        barData.setBarWidth(0.9f);
+        barData.setValueFormatter(new ValueFormatter() {
+            @Override
+            public String getFormattedValue(float value) {
+                return OpenVPNService.humanReadableByteCount((long) value, true);
+            }
+        });
+
+        chart.setData(barData);
+        chart.setFitBars(true);
+        chart.getDescription().setEnabled(false);
+        chart.getLegend().setEnabled(false);
+
+        XAxis xAxis = chart.getXAxis();
+        xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
+        xAxis.setDrawGridLines(false);
+        final String[] labels = new String[]{"Download", "Upload"};
+        xAxis.setValueFormatter(new IndexAxisValueFormatter(labels));
+        xAxis.setGranularity(1f);
+        xAxis.setLabelCount(labels.length);
+        xAxis.setTextColor(textColor);
+        xAxis.setAxisLineColor(gridColor);
+
+        YAxis leftAxis = chart.getAxisLeft();
+        leftAxis.setAxisMinimum(0f);
+        leftAxis.setTextColor(textColor);
+        leftAxis.setGridColor(gridColor);
+        leftAxis.setAxisLineColor(gridColor);
+
+        chart.getAxisRight().setEnabled(false);
+
+        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        chart.draw(canvas);
+
+        return bitmap;
+    }
+}

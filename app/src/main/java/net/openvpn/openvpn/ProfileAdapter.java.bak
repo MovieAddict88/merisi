@@ -1,0 +1,161 @@
+package net.openvpn.openvpn;
+
+import android.content.Context;
+import android.content.res.AssetManager;
+import android.graphics.drawable.Drawable;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+public class ProfileAdapter extends ArrayAdapter<OpenVPNService.Profile> {
+
+    private static final String TAG = "ProfileAdapter";
+
+    public ProfileAdapter(Context context, List<OpenVPNService.Profile> profiles) {
+        super(context, 0, profiles);
+    }
+
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent) {
+        return createItemView(position, convertView, parent, false);
+    }
+
+    @Override
+    public View getDropDownView(int position, View convertView, ViewGroup parent) {
+        return createItemView(position, convertView, parent, true);
+    }
+
+    private View createItemView(int position, View convertView, ViewGroup parent, boolean isDropDown) {
+        View listItem = convertView;
+        if (listItem == null) {
+            listItem = LayoutInflater.from(getContext()).inflate(R.layout.spinner_item_with_flag, parent, false);
+        }
+
+        OpenVPNService.Profile currentProfile = getItem(position);
+
+        ImageView flagIcon = listItem.findViewById(R.id.flag_icon);
+        TextView serverName = listItem.findViewById(R.id.server_name);
+        TextView pingTime = listItem.findViewById(R.id.ping_time);
+        ImageView signalStrength = listItem.findViewById(R.id.signal_strength);
+        View separator = listItem.findViewById(R.id.separator);
+
+        if (isDropDown) {
+            if (position == getCount() - 1) {
+                separator.setVisibility(View.GONE);
+            } else {
+                separator.setVisibility(View.VISIBLE);
+            }
+        } else {
+            separator.setVisibility(View.GONE);
+        }
+
+        if (currentProfile != null) {
+            String profileName = currentProfile.get_name();
+            serverName.setText(profileName);
+
+            // Fix for ping time display
+            if (currentProfile.ping_latency >= 0) {
+                pingTime.setText(currentProfile.ping_latency + "ms");
+                int signalLevel = getSignalStrengthLevel(currentProfile.ping_latency);
+                int signalIcon = getSignalStrengthIcon(signalLevel);
+                signalStrength.setImageResource(signalIcon);
+                signalStrength.setVisibility(View.VISIBLE);
+            } else {
+                pingTime.setText("Pinging...");
+                signalStrength.setImageResource(R.drawable.ic_signal_0);
+                signalStrength.setVisibility(View.VISIBLE);
+            }
+
+            String countryCode = getCountryCode(profileName);
+            if (countryCode != null) {
+                try {
+                    AssetManager assets = getContext().getAssets();
+                    InputStream stream = assets.open("flags/" + countryCode.toLowerCase() + ".png");
+                    Drawable flag = Drawable.createFromStream(stream, null);
+                    flagIcon.setImageDrawable(flag);
+                } catch (IOException e) {
+                    Log.w(TAG, "Could not load flag for " + countryCode, e);
+                    flagIcon.setImageResource(R.drawable.icon);
+                }
+            } else {
+                flagIcon.setImageResource(R.drawable.icon);
+            }
+        }
+
+        return listItem;
+    }
+
+    private int getSignalStrengthLevel(long latency) {
+        if (latency < 0) return 0; // No signal
+        if (latency < 50) return 4; // Excellent
+        if (latency < 100) return 3; // Good
+        if (latency < 200) return 2; // Fair
+        if (latency < 300) return 1; // Poor
+        return 0; // No signal
+    }
+
+    private int getSignalStrengthIcon(int level) {
+        switch (level) {
+            case 4:
+                return R.drawable.ic_signal_4; // Excellent - 4 bars
+            case 3:
+                return R.drawable.ic_signal_3; // Good - 3 bars
+            case 2:
+                return R.drawable.ic_signal_2; // Fair - 2 bars
+            case 1:
+                return R.drawable.ic_signal_1; // Poor - 1 bar
+            default:
+                return R.drawable.ic_signal_0; // No signal - 0 bars
+        }
+    }
+
+    private String getCountryCode(String profileName) {
+        if (profileName == null || profileName.isEmpty()) {
+            return null;
+        }
+
+        // Pattern for vpnbook style: vpnbook-ca149-tcp80 -> ca
+        Pattern p = Pattern.compile("vpnbook-([a-z]{2})", Pattern.CASE_INSENSITIVE);
+        Matcher m = p.matcher(profileName);
+        if (m.find()) {
+            return m.group(1).toLowerCase();
+        }
+
+        // Pattern for country code at start: us-server, uk-london
+        p = Pattern.compile("^([a-z]{2})[-_]");
+        m = p.matcher(profileName.toLowerCase());
+        if (m.find()) {
+            return m.group(1);
+        }
+
+        // Try to extract from common country names
+        String lowerName = profileName.toLowerCase();
+        if (lowerName.contains("usa") || lowerName.contains("united states") || lowerName.contains("us-")) {
+            return "us";
+        } else if (lowerName.contains("canada") || lowerName.contains("ca-")) {
+            return "ca";
+        } else if (lowerName.contains("germany") || lowerName.contains("de-") || lowerName.contains("deutschland")) {
+            return "de";
+        } else if (lowerName.contains("france") || lowerName.contains("fr-")) {
+            return "fr";
+        } else if (lowerName.contains("uk") || lowerName.contains("united kingdom") || lowerName.contains("gb-")) {
+            return "gb";
+        } else if (lowerName.contains("japan") || lowerName.contains("jp-")) {
+            return "jp";
+        } else if (lowerName.contains("australia") || lowerName.contains("au-")) {
+            return "au";
+        }
+
+        return null;
+    }
+}

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#284390</color>
+    <color name="colorPrimaryDark">#1e326b</color>
+    <color name="colorAccent">#ff9800</color>
+    <color name="white">#FFFFFF</color>
+    <color name="premium_yellow">#FFC107</color>
+    <color name="grey">#B0B0B0</color>
+    <color name="text_color">#FFFFFF</color>
+    <color name="button_color">#2C2C54</color>
+    <color name="button_text_color">#FFFFFF</color>
+    <color name="status_connected">#00C853</color>
+    <color name="status_disconnected">#D50000</color>
+    <color name="list_item_background">#2C2C54</color>
+    <color name="list_item_text">#FFFFFF</color>
+	
+	
+	<color name="chart_download_color">#FF227900</color>
+    <color name="chart_upload_color">#FFCB0000</color>
+	
+	<color name="login_blue">#303F9F</color>
+    <color name="login_yellow">#FFC107</color>
+	<color name="login_button_grey">#D3D3D3</color>
+	
+    <color name="ping_green">#00FF00</color>
+    <color name="ping_orange">#FFA500</color>
+    <color name="ping_red">#FF0000</color>
+
+    <color name="signal_excellent">#007820</color>
+    <color name="signal_good">#E3FF00</color>
+    <color name="signal_fair">#f8961e</color>
+    <color name="signal_poor">#FF0000</color>
+    <color name="signal_none">#ccc</color>
+</resources>
+

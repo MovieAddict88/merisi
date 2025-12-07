@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	
+	<style name="SpinnerNoArrow" parent="Widget.AppCompat.Spinner">
+    <item name="android:background">@null</item>
+    <item name="android:padding">0dp</item>
+</style>
+
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowBackground">@color/colorPrimary</item>
+        <item name="android:textColor">@color/text_color</item>
+    </style>
+
+    <style name="TitleText" parent="android:Widget.TextView">
+        <item name="android:textSize">24sp</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="SubtitleText" parent="android:Widget.TextView">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/grey</item>
+    </style>
+
+    <style name="TimerText" parent="android:Widget.TextView">
+        <item name="android:textSize">48sp</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="PremiumButton" parent="android:Widget.Button">
+        <item name="android:background">@drawable/premium_button_background</item>
+        <item name="android:textColor">@color/premium_yellow</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:paddingLeft">16dp</item>
+        <item name="android:paddingRight">16dp</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">8dp</item>
+    </style>
+
+    <style name="ConnectButton" parent="android:Widget.Button">
+        <item name="android:background">@drawable/connect_button_background</item>
+        <item name="android:textColor">@color/button_text_color</item>
+        <item name="android:textSize">18sp</item>
+    </style>
+
+    <style name="CountryListItem">
+        <item name="android:background">@drawable/list_item_background</item>
+        <item name="android:padding">16dp</item>
+        <item name="android:layout_marginBottom">8dp</item>
+    </style>
+
+    <style name="CountryListConnectButton" parent="android:Widget.Button">
+        <item name="android:background">@drawable/list_item_connect_button_background</item>
+        <item name="android:textColor">@color/button_text_color</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+
+    <style name="title">
+        <item name="android:textAppearance">?android:textAppearanceLarge</item>
+        <item name="android:layout_width">fill_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <style name="item">
+        <item name="android:textAppearance">?android:textAppearanceMedium</item>
+        <item name="android:layout_width">fill_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <style name="item_wrap">
+        <item name="android:textAppearance">?android:textAppearanceMedium</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <style name="image">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <style name="label">
+        <item name="android:textAppearance">?android:textAppearanceMedium</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:layout_width">fill_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <style name="edit">
+        <item name="android:textAppearance">?android:textAppearanceMedium</item>
+        <item name="android:layout_width">fill_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:inputType">textNoSuggestions</item>
+    </style>
+
+    <style name="button">
+        <item name="android:textAppearance">?android:textAppearanceMedium</item>
+        <item name="android:layout_width">240.0sp</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <style name="info_box">
+        <item name="android:orientation">vertical</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <style name="subtitle">
+        <item name="android:textAppearance">?android:textAppearanceSmall</item>
+        <item name="android:layout_width">fill_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <style name="footer">
+        <item name="android:textAppearance">?android:textAppearanceSmall</item>
+        <item name="android:gravity">center</item>
+        <item name="android:layout_width">fill_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <style name="group">
+        <item name="android:orientation">vertical</item>
+        <item name="android:layout_width">fill_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <style name="group_wrap">
+        <item name="android:orientation">vertical</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <style name="group_horizontal">
+        <item name="android:orientation">horizontal</item>
+        <item name="android:layout_width">fill_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <style name="spacer8">
+        <item name="android:layout_width">fill_parent</item>
+        <item name="android:layout_height">8.0sp</item>
+    </style>
+
+    <style name="spacer16">
+        <item name="android:layout_width">fill_parent</item>
+        <item name="android:layout_height">16.0sp</item>
+    </style>
+
+    <style name="stats_group">
+        <item name="android:orientation">vertical</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <style name="stats_boxed">
+        <item name="android:orientation">vertical</item>
+        <item name="android:background">@drawable/stats_box</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <style name="stats_section">
+        <item name="android:orientation">vertical</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <style name="stats_table">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <style name="stats_header">
+        <item name="android:textAppearance">?android:textAppearanceMedium</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <style name="stats_row">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <style name="stats_key">
+        <item name="android:textAppearance">?android:textAppearanceSmall</item>
+        <item name="android:paddingLeft">16.0sp</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <style name="stats_value">
+        <item name="android:textAppearance">?android:textAppearanceSmall</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:paddingLeft">16.0sp</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <style name="ad_layout">
+        <item name="android:paddingLeft">5.0dip</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <style name="ad_image">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+</resources>

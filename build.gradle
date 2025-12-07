@@ -1,0 +1,31 @@
+buildscript {
+    ext.build_gradle_version = '8.13.1'
+
+    repositories {
+        maven { url "https://jitpack.io" }
+        google()
+        mavenLocal()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "com.android.tools.build:gradle:$build_gradle_version"
+        
+    }
+    
+}
+allprojects {
+    repositories {
+        maven { url "https://jitpack.io" }
+        mavenLocal()
+        mavenCentral()
+        google()
+    }
+	
+
+        
+	
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}

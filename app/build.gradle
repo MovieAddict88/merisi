@@ -1,0 +1,184 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    compileSdkVersion = 36
+    namespace = 'net.openvpn.openvpn'
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    defaultConfig {
+        applicationId "net.openvpn.openvpn"
+        minSdk = 26
+        targetSdk = 36
+        versionCode = 1
+        versionName '1.0.0'
+        //multiDexEnabled true
+        buildConfigField "String", "API_URL", "\"https://web.cornerstone-its-mobiledata.com/api.php\""
+        buildConfigField "String", "FLAG_URL", "\"https://web.cornerstone-its-mobiledata.com/flags/\""
+        
+        // For better performance
+        vectorDrawables.useSupportLibrary = true
+        
+        // Optional: Limit architectures to reduce APK size
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a'
+        }
+    }
+
+    // 🔐 SIGNING CONFIGURATION
+    signingConfigs {
+        release {
+            storeFile file("../keystore/release-key.jks")
+            storePassword "ronald"
+            keyAlias "ronald"
+            keyPassword "ronald"
+            // Enable v2+ signing (v3/v4 are automatically enabled with targetSdk >= 30)
+            v2SigningEnabled true
+            // Optional: Disable v1 (JAR signing) for better security
+            // v1SigningEnabled false
+        }
+        
+        debug {
+            storeFile file("debug.keystore")
+            storePassword "ronald"
+            keyAlias "ronald"
+            keyPassword "ronald"
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+            minifyEnabled false
+            shrinkResources false
+            debuggable true
+            versionNameSuffix "-debug"
+            
+            // Debug configuration
+            buildConfigField "boolean", "IS_DEBUG", "true"
+            buildConfigField "boolean", "LOG_ENABLED", "true"
+        }
+        
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            debuggable false
+            
+            // Release configuration
+            buildConfigField "boolean", "IS_DEBUG", "false"
+            buildConfigField "boolean", "LOG_ENABLED", "false"
+            
+            // Optimizations
+            crunchPngs true
+            zipAlignEnabled true
+            
+            // Optional: Enable R8 full mode (better optimization)
+            // proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    
+    // Optional: Build flavors (if needed)
+    /*flavorDimensions "version"
+    productFlavors {
+        free {
+            dimension "version"
+            applicationIdSuffix ".free"
+            versionNameSuffix "-free"
+        }
+        pro {
+            dimension "version"
+            applicationIdSuffix ".pro"
+            versionNameSuffix "-pro"
+        }
+    }*/
+
+    compileOptions {
+        sourceCompatibility = JavaLanguageVersion.of(17)
+        targetCompatibility = JavaLanguageVersion.of(17)
+    }
+    
+    // Optimize APK size with ABI splits
+    /*splits {
+        abi {
+            enable true
+            reset()
+            include 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+            universalApk true
+        }
+    }*/
+    
+    // Optional: Bundle configuration (for App Bundle)
+   /* bundle {
+        language {
+            enableSplit = true
+        }
+        density {
+            enableSplit = true
+        }
+        abi {
+            enableSplit = true
+        }
+    }*/
+    
+    // Build output naming
+   /* applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            def project = "OpenVPN"
+            def SEP = "_"
+            def flavor = variant.flavorName
+            def buildType = variant.buildType.name
+            def version = variant.versionName
+            def versionCode = variant.versionCode
+            def date = new Date()
+            def formattedDate = date.format('yyyyMMdd_HHmm')
+            
+            def newApkName = project + SEP + flavor + SEP + buildType + SEP + version + SEP + versionCode + SEP + formattedDate + ".apk"
+            
+            outputFileName = new File(newApkName)
+        }
+    }*/
+}
+
+dependencies {
+    // Core libraries
+    implementation 'net.lingala.zip4j:zip4j:2.11.5'
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'androidx.appcompat:appcompat:1.7.1'
+    implementation 'com.google.android.material:material:1.13.0'
+    //implementation 'androidx.multidex:multidex:2.0.1'
+    
+    // Chart library
+    implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
+    
+    // Image loading
+    implementation 'com.github.bumptech.glide:glide:4.12.0'
+    annotationProcessor 'com.github.bumptech.glide:compiler:4.12.0'
+    
+    // Ads
+    implementation 'com.google.android.gms:play-services-ads:22.0.0'
+    
+    // Optional: For network operations (if you need it)
+    // implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+    // implementation 'com.squareup.okhttp3:okhttp:4.9.3'
+    
+    // Optional: For logging
+    // implementation 'com.jakewharton.timber:timber:5.0.1'
+}
+
+// Optional: Add this for better dependency management
+configurations.all {
+    resolutionStrategy {
+        // Force specific versions if needed
+        force 'androidx.core:core-ktx:1.12.0'
+        
+        // Cache dynamic versions
+        cacheChangingModulesFor 0, 'seconds'
+        cacheDynamicVersionsFor 0, 'seconds'
+    }
+}
