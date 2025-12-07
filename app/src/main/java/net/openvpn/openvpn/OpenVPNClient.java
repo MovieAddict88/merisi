@@ -72,7 +72,6 @@ import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
-
 public class OpenVPNClient extends OpenVPNClientBase implements OnClickListener, OnTouchListener, OnItemSelectedListener, OnEditorActionListener {
     private AdView mAdView;
     private InterstitialAd mInterstitialAd;
@@ -158,6 +157,19 @@ public class OpenVPNClient extends OpenVPNClientBase implements OnClickListener,
     private View username_group;
     private ExecutorService executor;
 
+    private BroadcastReceiver promoReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent.getAction().equals(OpenVPNService.PROMOS_UPDATED)) {
+                ArrayList<Promo> promos = (ArrayList<Promo>) intent.getSerializableExtra("promos");
+                if (promos != null && !promos.isEmpty()) {
+                    PromoAdapter promoAdapter = new PromoAdapter(OpenVPNClient.this, promos);
+                    promo_spinner.setAdapter(promoAdapter);
+                }
+            }
+        }
+    };
+
     private enum FinishOnConnect {
         DISABLED,
         ENABLED,
@@ -201,7 +213,8 @@ public class OpenVPNClient extends OpenVPNClientBase implements OnClickListener,
         warn_app_expiration(this.prefs);
         new AppRate(this).setMinDaysUntilPrompt(14).setMinLaunchesUntilPrompt(10).init();
 
-        new FetchPromosTask().execute();
+        IntentFilter filter = new IntentFilter(OpenVPNService.PROMOS_UPDATED);
+        registerReceiver(promoReceiver, filter);
 
         if (Build.VERSION.SDK_INT >= 33) {
             if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -247,7 +260,7 @@ public class OpenVPNClient extends OpenVPNClientBase implements OnClickListener,
         Log.d(TAG, "CLI: post bind");
         this.startup_state |= S_BIND_CALLED;
         Promo selectedPromo = (Promo) promo_spinner.getSelectedItem();
-        mBoundService.refresh_profile_list(selectedPromo != null ? selectedPromo.getId() : null);
+        mBoundService.refresh_data(selectedPromo != null ? selectedPromo.getId() : null);
         process_autostart_intent(is_active());
         render_last_event();
     }
@@ -496,6 +509,7 @@ public class OpenVPNClient extends OpenVPNClientBase implements OnClickListener,
     protected void onDestroy() {
         stop();
         Log.d(TAG, "CLI: onDestroy called");
+        unregisterReceiver(promoReceiver);
         super.onDestroy();
         executor.shutdown();
     }
@@ -1614,47 +1628,6 @@ public class OpenVPNClient extends OpenVPNClientBase implements OnClickListener,
                 // Permission granted
             } else {
                 // Permission denied
-            }
-        }
-    }
-
-    private class FetchPromosTask extends AsyncTask<Void, Void, ArrayList<Promo>> {
-        @Override
-        protected ArrayList<Promo> doInBackground(Void... voids) {
-            ArrayList<Promo> promos = new ArrayList<>();
-            try {
-                URL url = new URL(BuildConfig.API_URL.replace("api.php", "api_get_promos.php"));
-                HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
-                try {
-                    BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
-                    StringBuilder stringBuilder = new StringBuilder();
-                    String line;
-                    while ((line = bufferedReader.readLine()) != null) {
-                        stringBuilder.append(line).append("\n");
-                    }
-                    bufferedReader.close();
-                    JSONObject jsonObject = new JSONObject(stringBuilder.toString());
-                    if (jsonObject.getString("status").equals("success")) {
-                        JSONArray promosArray = jsonObject.getJSONArray("promos");
-                        for (int i = 0; i < promosArray.length(); i++) {
-                            JSONObject promoObject = promosArray.getJSONObject(i);
-                            promos.add(new Promo(promoObject.getInt("id"), promoObject.getString("promo_name"), promoObject.getString("icon_promo_path")));
-                        }
-                    }
-                } finally {
-                    urlConnection.disconnect();
-                }
-            } catch (java.io.IOException | org.json.JSONException e) {
-                Log.e("FetchPromosTask", "Error fetching promos", e);
-            }
-            return promos;
-        }
-
-        @Override
-        protected void onPostExecute(ArrayList<Promo> promos) {
-            if (promos != null && !promos.isEmpty()) {
-                PromoAdapter promoAdapter = new PromoAdapter(OpenVPNClient.this, promos);
-                promo_spinner.setAdapter(promoAdapter);
             }
         }
     }

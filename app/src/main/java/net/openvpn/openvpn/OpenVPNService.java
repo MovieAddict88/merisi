@@ -62,6 +62,11 @@ import com.bumptech.glide.request.transition.Transition;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.io.Serializable;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
 public class OpenVPNService extends VpnService implements Callback, net.openvpn.openvpn.OpenVPNClientThread.EventReceiver {
     public static final String ACTION_BASE = "net.openvpn.openvpn.";
@@ -70,9 +75,12 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
     public static final String ACTION_DELETE_PROFILE = "net.openvpn.openvpn.DELETE_PROFILE";
     public static final String ACTION_DISCONNECT = "net.openvpn.openvpn.DISCONNECT";
     public static final String ACTION_IMPORT_PROFILE = "net.openvpn.openvpn.IMPORT_PROFILE";
+    public static final String ACTION_REFRESH_PROFILES = "net.openvpn.openvpn.REFRESH_PROFILES";
+    public static final String ACTION_REFRESH_PROMOS = "net.openvpn.openvpn.REFRESH_PROMOS";
     public static final String ACTION_IMPORT_PROFILE_VIA_PATH = "net.openvpn.openvpn.ACTION_IMPORT_PROFILE_VIA_PATH";
     public static final String ACTION_RENAME_PROFILE = "net.openvpn.openvpn.RENAME_PROFILE";
     public static final String ACTION_SUBMIT_PROXY_CREDS = "net.openvpn.openvpn.ACTION_SUBMIT_PROXY_CREDS";
+    public static final String PROMOS_UPDATED = "net.openvpn.openvpn.PROMOS_UPDATED";
     public static final int EV_PRIO_HIGH = 3;
     public static final int EV_PRIO_INVISIBLE = 0;
     public static final int EV_PRIO_LOW = 1;
@@ -124,7 +132,8 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
         void log(LogMsg logMsg);
     }
 
-    public static class Challenge {
+    public static class Challenge implements Serializable {
+        private static final long serialVersionUID = 1L;
         private String challenge;
         private boolean echo;
         private boolean response_required;
@@ -147,6 +156,57 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
             objArr[OpenVPNService.MSG_EVENT] = Boolean.valueOf(this.echo);
             objArr[OpenVPNService.MSG_LOG] = Boolean.valueOf(this.response_required);
             return String.format("%s/%b/%b", objArr);
+        }
+    }
+
+    class FetchPromosTask extends AsyncTask<Void, Void, ArrayList<Promo>> {
+        private static final String PROMOS_CACHE_FILE = "promos.dat";
+
+        @Override
+        protected ArrayList<Promo> doInBackground(Void... voids) {
+            ArrayList<Promo> promos = CacheHelper.readFromCache(OpenVPNService.this, PROMOS_CACHE_FILE);
+            if (promos != null) {
+                return promos;
+            }
+
+            promos = new ArrayList<>();
+            try {
+                URL url = new URL(BuildConfig.API_URL.replace("api.php", "api_get_promos.php"));
+                HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+                try {
+                    BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+                    StringBuilder stringBuilder = new StringBuilder();
+                    String line;
+                    while ((line = bufferedReader.readLine()) != null) {
+                        stringBuilder.append(line).append("\n");
+                    }
+                    bufferedReader.close();
+                    JSONObject jsonObject = new JSONObject(stringBuilder.toString());
+                    if (jsonObject.getString("status").equals("success")) {
+                        JSONArray promosArray = jsonObject.getJSONArray("promos");
+                        for (int i = 0; i < promosArray.length(); i++) {
+                            JSONObject promoObject = promosArray.getJSONObject(i);
+                            promos.add(new Promo(promoObject.getInt("id"), promoObject.getString("promo_name"), promoObject.getString("icon_promo_path")));
+                        }
+                        CacheHelper.saveToCache(OpenVPNService.this, PROMOS_CACHE_FILE, promos);
+                    }
+                } finally {
+                    urlConnection.disconnect();
+                }
+            } catch (java.io.IOException | org.json.JSONException e) {
+                Log.e("FetchPromosTask", "Error fetching promos", e);
+            }
+            return promos;
+        }
+
+        @Override
+        protected void onPostExecute(ArrayList<Promo> promos) {
+            if (promos != null && !promos.isEmpty()) {
+                // Notify the UI to update the promo spinner
+                Intent intent = new Intent(PROMOS_UPDATED);
+                intent.putExtra("promos", promos);
+                sendBroadcast(intent);
+            }
         }
     }
 
@@ -396,7 +456,8 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
         String line;
     }
 
-    public class Profile {
+    public class Profile implements Serializable {
+        private static final long serialVersionUID = 1L;
         private boolean allow_password_save;
         private boolean autologin;
         private DynamicChallenge dynamic_challenge;
@@ -956,7 +1017,8 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
         }
     }
 
-    public static class ServerEntry {
+    public static class ServerEntry implements Serializable {
+        private static final long serialVersionUID = 1L;
         private String friendly_name;
         private String server;
 
@@ -975,7 +1037,8 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
         }
     }
 
-    public static class ServerList {
+    public static class ServerList implements Serializable {
+        private static final long serialVersionUID = 1L;
         private ArrayList<ServerEntry> list = new ArrayList();
 
         public String[] display_names() {
@@ -1170,9 +1233,11 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
 
     private static final String BASE_URL = "https://web.cornerstone-its-mobiledata.com/";
 
-    private class FetchProfilesTask extends AsyncTask<String, Void, String> {
+    private class FetchProfilesTask extends AsyncTask<String, Void, ProfileList> {
+        private static final String PROFILES_CACHE_FILE = "profiles.dat";
+
         @Override
-        protected String doInBackground(String... params) {
+        protected ProfileList doInBackground(String... params) {
             HttpURLConnection urlConnection = null;
             try {
                 URL url = new URL(params[0]);
@@ -1200,39 +1265,10 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
                         response.append(inputLine);
                     }
                     in.close();
-                    return response.toString();
-                } else {
-                    Log.e(TAG, "HTTP error code: " + responseCode);
-                    return null;
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "Error fetching profiles", e);
-                return null;
-            } finally {
-                if (urlConnection != null) {
-                    urlConnection.disconnect();
-                }
-            }
-        }
-
-        @Override
-        protected void onPostExecute(String result) {
-            if (result != null) {
-                try {
+                    String result = response.toString();
                     JSONObject jsonObj = new JSONObject(result);
                     if (jsonObj.getString("status").equals("success")) {
-                        // Clear existing profiles and files before fetching new ones
-                        profile_list.clear();
-                        File dir = getFilesDir();
-                        File[] files = dir.listFiles();
-                        if (files != null) {
-                            for (File file : files) {
-                                if (file.getPath().endsWith(".ovpn")) {
-                                    file.delete();
-                                }
-                            }
-                        }
-
+                        ProfileList fetchedProfiles = new ProfileList();
                         JSONArray profiles = jsonObj.getJSONArray("profiles");
                         for (int i = 0; i < profiles.length(); i++) {
                             JSONObject p = profiles.getJSONObject(i);
@@ -1244,9 +1280,7 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
                             int ping = p.optInt("ping", 999);
                             int signal_strength = p.optInt("signal_strength", 0);
 
-                            // Use the profile name for both filename and display name
                             String profileFilename = profile_name + ".ovpn";
-
                             FileUtil.writeFileAppPrivate(OpenVPNService.this, profileFilename, profile_content);
 
                             ClientAPI_Config config = new ClientAPI_Config();
@@ -1260,26 +1294,81 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
                                 prof.icon_path = icon_path;
                                 prof.set_ping(ping);
                                 prof.signal_strength = signal_strength;
-                                profile_list.add(prof);
-                                Log.d(TAG, "Added profile: " + prof.get_name());
+                                fetchedProfiles.add(prof);
                             } else {
                                 Log.e(TAG, "Error parsing profile " + profile_name + ": " + ec.getMessage());
                             }
                         }
-                        profile_list.sort();
-                        gen_event(0, "UI_RESET", null, null, null);
-                        Log.i(TAG, "Profiles reloaded successfully from API.");
-                    } else {
-                        Log.e(TAG, "Failed to fetch profiles: " + jsonObj.getString("message"));
+                        return fetchedProfiles;
                     }
-                } catch (JSONException e) {
-                    Log.e(TAG, "Error parsing profiles JSON", e);
-                } catch (IOException e) {
-                    Log.e(TAG, "Error writing profile to storage", e);
                 }
-            } else {
-                Log.e(TAG, "Failed to fetch profiles, result is null.");
+            } catch (Exception e) {
+                Log.e(TAG, "Error fetching profiles", e);
+            } finally {
+                if (urlConnection != null) {
+                    urlConnection.disconnect();
+                }
             }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(ProfileList fetchedProfiles) {
+            if (fetchedProfiles != null) {
+                profile_list = (ProfileList) CacheHelper.readFromCache(OpenVPNService.this, PROFILES_CACHE_FILE);
+                if (profile_list == null) {
+                    profile_list = new ProfileList();
+                }
+
+                updateLocalProfiles(fetchedProfiles);
+
+                profile_list.sort();
+                gen_event(0, "UI_RESET", null, null, null);
+                Log.i(TAG, "Profiles reloaded successfully.");
+            } else {
+                Log.e(TAG, "Failed to fetch profiles, result is null or invalid.");
+            }
+        }
+
+        private void updateLocalProfiles(ProfileList fetchedProfiles) {
+            // Create a map of fetched profiles for efficient lookup
+            HashMap<String, Profile> fetchedProfilesMap = new HashMap<>();
+            for (Profile p : fetchedProfiles) {
+                fetchedProfilesMap.put(p.get_name(), p);
+            }
+
+            // Remove profiles that are no longer on the server
+            Iterator<Profile> iterator = profile_list.iterator();
+            while (iterator.hasNext()) {
+                Profile localProfile = iterator.next();
+                if (!fetchedProfilesMap.containsKey(localProfile.get_name())) {
+                    iterator.remove();
+                    // Also delete the .ovpn file
+                    File file = new File(getFilesDir(), localProfile.get_filename());
+                    if (file.exists()) {
+                        file.delete();
+                    }
+                }
+            }
+
+            // Update existing profiles and add new ones
+            for (Profile fetchedProfile : fetchedProfiles) {
+                Profile localProfile = profile_list.get_profile_by_name(fetchedProfile.get_name());
+                if (localProfile != null) {
+                    // Update existing profile
+                    localProfile.id = fetchedProfile.id;
+                    localProfile.profile_type = fetchedProfile.get_profile_type();
+                    localProfile.icon_path = fetchedProfile.get_icon_path();
+                    localProfile.set_ping(fetchedProfile.get_ping());
+                    localProfile.signal_strength = fetchedProfile.get_signal_strength();
+                } else {
+                    // Add new profile
+                    profile_list.add(fetchedProfile);
+                }
+            }
+
+            // Save updated profile list to cache
+            CacheHelper.saveToCache(OpenVPNService.this, PROFILES_CACHE_FILE, profile_list);
         }
     }
 
@@ -1422,6 +1511,10 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
                 delete_profile_action(prefix, intent);
             } else if (action.equals(ACTION_RENAME_PROFILE)) {
                 rename_profile_action(prefix, intent);
+            } else if (action.equals(ACTION_REFRESH_PROFILES)) {
+                refresh_data(null);
+            } else if (action.equals(ACTION_REFRESH_PROMOS)) {
+                new FetchPromosTask().execute();
             }
         }
         return Service.START_STICKY;
@@ -1908,8 +2001,20 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
         Log.d(str, String.format("SERV: client detach n_clients=%d", objArr));
     }
 
-    public void refresh_profile_list(Integer promo_id) {
-        this.profile_list = new ProfileList();
+    public void refresh_data(Integer promo_id) {
+        new FetchPromosTask().execute();
+
+        // Load profiles from cache first for quick UI update
+        profile_list = (ProfileList) CacheHelper.readFromCache(this, "profiles.dat");
+        if (profile_list != null) {
+            profile_list.sort();
+            gen_event(0, "UI_RESET", null, null, null);
+            Log.i(TAG, "Profiles loaded from cache for immediate display.");
+        } else {
+            profile_list = new ProfileList(); // Ensure profile_list is not null
+        }
+
+        // Then fetch latest profiles from the server
         SharedPreferences login_prefs = getSharedPreferences(LoginActivity.PREFS_NAME, MODE_PRIVATE);
         String login_code = login_prefs.getString("login_code", null);
         if (login_code != null) {
@@ -1917,10 +2022,6 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
         } else {
             Log.e(TAG, "Login code not found, cannot fetch profiles.");
         }
-    }
-
-    public void refresh_profile_list() {
-        refresh_profile_list(null);
     }
 
     public Profile get_current_profile() {
