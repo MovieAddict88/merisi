@@ -115,6 +115,14 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
     public ProxyList proxy_list;
     private PasswordUtil pwds;
     private boolean shutdown_pending = false;
+
+    public void refresh_profile_list() {
+        refresh_data(null);
+    }
+
+    public void refresh_profile_list(Integer promo_id) {
+        refresh_data(promo_id);
+    }
     private long thread_started = 0;
     private String session_id;
     private Handler statusHandler = new Handler();
