@@ -164,12 +164,18 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
 
         @Override
         protected ArrayList<Promo> doInBackground(Void... voids) {
-            ArrayList<Promo> promos = CacheHelper.readFromCache(OpenVPNService.this, PROMOS_CACHE_FILE);
-            if (promos != null) {
+            ArrayList<?> cached_promos_raw = CacheHelper.readFromCache(OpenVPNService.this, PROMOS_CACHE_FILE);
+            if (cached_promos_raw != null && !cached_promos_raw.isEmpty()) {
+                ArrayList<Promo> promos = new ArrayList<>();
+                for (Object obj : cached_promos_raw) {
+                    if (obj instanceof Promo) {
+                        promos.add((Promo) obj);
+                    }
+                }
                 return promos;
             }
 
-            promos = new ArrayList<>();
+            ArrayList<Promo> promos = new ArrayList<>();
             try {
                 URL url = new URL(BuildConfig.API_URL.replace("api.php", "api_get_promos.php"));
                 HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
@@ -269,6 +275,9 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
                     z = true;
                 }
                 this.conn_on = z;
+                if (this.conn_on) {
+                    fetch_profiles_from_server(null);
+                }
                 failover = intent.getBooleanExtra("isFailover", false);
                 conn_on_mod = true;
                 this.conn_on_defined = true;
@@ -2019,19 +2028,24 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
     public void refresh_data(Integer promo_id) {
         new FetchPromosTask().execute();
 
-        // Load profiles from cache first for quick UI update
-        ArrayList<Profile> cached_profiles = CacheHelper.readFromCache(this, "profiles.dat");
-        if (cached_profiles != null) {
+        ArrayList<?> cached_profiles_raw = CacheHelper.readFromCache(this, "profiles.dat");
+        if (cached_profiles_raw != null && !cached_profiles_raw.isEmpty()) {
             profile_list = new ProfileList();
-            profile_list.addAll(cached_profiles);
+            for (Object obj : cached_profiles_raw) {
+                if (obj instanceof Profile) {
+                    profile_list.add((Profile) obj);
+                }
+            }
             profile_list.sort();
             gen_event(0, "UI_RESET", null, null, null);
             Log.i(TAG, "Profiles loaded from cache for immediate display.");
         } else {
             profile_list = new ProfileList(); // Ensure profile_list is not null
         }
+        fetch_profiles_from_server(promo_id);
+    }
 
-        // Then fetch latest profiles from the server
+    private void fetch_profiles_from_server(Integer promo_id) {
         SharedPreferences login_prefs = getSharedPreferences(LoginActivity.PREFS_NAME, MODE_PRIVATE);
         String login_code = login_prefs.getString("login_code", null);
         if (login_code != null) {
