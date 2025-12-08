@@ -163,8 +163,14 @@ public class OpenVPNClient extends OpenVPNClientBase implements OnClickListener,
         @Override
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction().equals(OpenVPNService.PROMOS_UPDATED)) {
-                ArrayList<Promo> promos = (ArrayList<Promo>) intent.getSerializableExtra("promos");
-                if (promos != null && !promos.isEmpty()) {
+                ArrayList<?> raw_promos = (ArrayList<?>) intent.getSerializableExtra("promos");
+                if (raw_promos != null && !raw_promos.isEmpty()) {
+                    ArrayList<Promo> promos = new ArrayList<>();
+                    for (Object obj : raw_promos) {
+                        if (obj instanceof Promo) {
+                            promos.add((Promo) obj);
+                        }
+                    }
                     PromoAdapter promoAdapter = new PromoAdapter(OpenVPNClient.this, promos);
                     promo_spinner.setAdapter(promoAdapter);
                 }
@@ -738,10 +744,12 @@ public class OpenVPNClient extends OpenVPNClientBase implements OnClickListener,
                 this.profile_group.setVisibility(View.GONE);
             } else {
                 ArrayList<Profile> filtered_proflist = new ArrayList<>();
-                for (int i = 0; i < proflist.size(); i++) {
-                    Profile p = proflist.get(i);
-                    if (p.get_profile_type().equals(profile_type_filter)) {
-                        filtered_proflist.add(p);
+                for (Object o : proflist) {
+                    if (o instanceof Profile) {
+                        Profile p = (Profile) o;
+                        if (p.get_profile_type().equals(profile_type_filter)) {
+                            filtered_proflist.add(p);
+                        }
                     }
                 }
 
