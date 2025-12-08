@@ -5,9 +5,11 @@ import android.app.Activity;
 import android.app.AlertDialog.Builder;
 import android.app.PendingIntent;
 import android.content.ActivityNotFoundException;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -409,7 +411,7 @@ public class OpenVPNClient extends OpenVPNClientBase implements OnClickListener,
     protected void onResume() {
         super.onResume();
         if (mBoundService != null) {
-            mBoundService.refresh_profile_list();
+            mBoundService.refresh_data(null);
         }
         // Add session validation
         validateSession();
@@ -1158,7 +1160,7 @@ public class OpenVPNClient extends OpenVPNClientBase implements OnClickListener,
             if (!is_active()) {
                 clearProfileSpinner();
                 Promo selectedPromo = (Promo) promo_spinner.getSelectedItem();
-                mBoundService.refresh_profile_list(selectedPromo != null ? selectedPromo.getId() : null);
+                mBoundService.refresh_data(selectedPromo != null ? selectedPromo.getId() : null);
             }
         }
     }

@@ -1315,22 +1315,24 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
         @Override
         protected void onPostExecute(ProfileList fetchedProfiles) {
             if (fetchedProfiles != null) {
-                profile_list = (ProfileList) CacheHelper.readFromCache(OpenVPNService.this, PROFILES_CACHE_FILE);
-                if (profile_list == null) {
-                    profile_list = new ProfileList();
+                ArrayList<Profile> cached_profiles = CacheHelper.readFromCache(OpenVPNService.this, PROFILES_CACHE_FILE);
+                profile_list = new ProfileList();
+                if (cached_profiles != null) {
+                    profile_list.addAll(cached_profiles);
                 }
 
-                updateLocalProfiles(fetchedProfiles);
-
-                profile_list.sort();
-                gen_event(0, "UI_RESET", null, null, null);
-                Log.i(TAG, "Profiles reloaded successfully.");
+                if (updateLocalProfiles(fetchedProfiles)) {
+                    profile_list.sort();
+                    gen_event(0, "UI_RESET", null, null, null);
+                    Log.i(TAG, "Profiles reloaded successfully.");
+                }
             } else {
                 Log.e(TAG, "Failed to fetch profiles, result is null or invalid.");
             }
         }
 
-        private void updateLocalProfiles(ProfileList fetchedProfiles) {
+        private boolean updateLocalProfiles(ProfileList fetchedProfiles) {
+            boolean changed = false;
             // Create a map of fetched profiles for efficient lookup
             HashMap<String, Profile> fetchedProfilesMap = new HashMap<>();
             for (Profile p : fetchedProfiles) {
@@ -1343,6 +1345,7 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
                 Profile localProfile = iterator.next();
                 if (!fetchedProfilesMap.containsKey(localProfile.get_name())) {
                     iterator.remove();
+                    changed = true;
                     // Also delete the .ovpn file
                     File file = new File(getFilesDir(), localProfile.get_filename());
                     if (file.exists()) {
@@ -1356,19 +1359,31 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
                 Profile localProfile = profile_list.get_profile_by_name(fetchedProfile.get_name());
                 if (localProfile != null) {
                     // Update existing profile
-                    localProfile.id = fetchedProfile.id;
-                    localProfile.profile_type = fetchedProfile.get_profile_type();
-                    localProfile.icon_path = fetchedProfile.get_icon_path();
-                    localProfile.set_ping(fetchedProfile.get_ping());
-                    localProfile.signal_strength = fetchedProfile.get_signal_strength();
+                    if (localProfile.id != fetchedProfile.id ||
+                        !localProfile.get_profile_type().equals(fetchedProfile.get_profile_type()) ||
+                        (localProfile.get_icon_path() != null && !localProfile.get_icon_path().equals(fetchedProfile.get_icon_path())) ||
+                        localProfile.get_ping() != fetchedProfile.get_ping() ||
+                        localProfile.signal_strength != fetchedProfile.get_signal_strength()) {
+
+                        localProfile.id = fetchedProfile.id;
+                        localProfile.profile_type = fetchedProfile.get_profile_type();
+                        localProfile.icon_path = fetchedProfile.get_icon_path();
+                        localProfile.set_ping(fetchedProfile.get_ping());
+                        localProfile.signal_strength = fetchedProfile.get_signal_strength();
+                        changed = true;
+                    }
                 } else {
                     // Add new profile
                     profile_list.add(fetchedProfile);
+                    changed = true;
                 }
             }
 
             // Save updated profile list to cache
-            CacheHelper.saveToCache(OpenVPNService.this, PROFILES_CACHE_FILE, profile_list);
+            if (changed) {
+                CacheHelper.saveToCache(OpenVPNService.this, PROFILES_CACHE_FILE, profile_list);
+            }
+            return changed;
         }
     }
 
@@ -1562,7 +1577,7 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
                 String profile_name = prof.get_name();
                 this.pwds.remove("auth", profile_name);
                 this.pwds.remove("pk", profile_name);
-                refresh_profile_list();
+                refresh_data(null);
                 gen_event(EV_PRIO_INVISIBLE, "PROFILE_IMPORT_SUCCESS", profile_name, profile_name);
                 return true;
             } catch (IOException e) {
@@ -1588,7 +1603,7 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
             if (deleteFile(profile.get_filename())) {
                 this.pwds.remove("auth", profile_name);
                 this.pwds.remove("pk", profile_name);
-                refresh_profile_list();
+                refresh_data(null);
                 gen_event(EV_PRIO_INVISIBLE, "PROFILE_DELETE_SUCCESS", profile.get_name());
                 return true;
             }
@@ -1622,7 +1637,7 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
         objArr[MSG_EVENT] = new_profile_name + ".ovpn";
         String to_path = String.format("%s/%s", objArr);
         if (FileUtil.renameFile(from_path, to_path)) {
-            refresh_profile_list();
+            refresh_data(null);
             Profile new_profile = this.profile_list.get_profile_by_name(new_profile_name);
             if (new_profile == null) {
                 Log.d(TAG, "PROFILE_RENAME_FAILED: post-rename profile get");
@@ -2005,8 +2020,10 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
         new FetchPromosTask().execute();
 
         // Load profiles from cache first for quick UI update
-        profile_list = (ProfileList) CacheHelper.readFromCache(this, "profiles.dat");
-        if (profile_list != null) {
+        ArrayList<Profile> cached_profiles = CacheHelper.readFromCache(this, "profiles.dat");
+        if (cached_profiles != null) {
+            profile_list = new ProfileList();
+            profile_list.addAll(cached_profiles);
             profile_list.sort();
             gen_event(0, "UI_RESET", null, null, null);
             Log.i(TAG, "Profiles loaded from cache for immediate display.");
@@ -2037,7 +2054,7 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
 
     public ProfileList get_profile_list() {
         if (this.profile_list == null) {
-            refresh_profile_list();
+            refresh_data(null);
         }
         return this.profile_list;
     }
