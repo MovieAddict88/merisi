@@ -1095,8 +1095,7 @@ public class OpenVPNClient extends OpenVPNClientBase implements OnClickListener,
                 premium_freemium_button.setText("Freemium");
             }
 
-            clearProfileSpinner();
-            ui_setup(is_active(), UIF_RESET, null);
+            mBoundService.refresh_data(null);
         }
     }
 
@@ -1158,7 +1157,6 @@ public class OpenVPNClient extends OpenVPNClientBase implements OnClickListener,
             gen_ui_reset_event(true);
         } else if (viewid == R.id.promo_spinner) {
             if (!is_active()) {
-                clearProfileSpinner();
                 Promo selectedPromo = (Promo) promo_spinner.getSelectedItem();
                 mBoundService.refresh_data(selectedPromo != null ? selectedPromo.getId() : null);
             }
