@@ -269,6 +269,9 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
                     z = true;
                 }
                 this.conn_on = z;
+                if (this.conn_on) {
+                    fetch_profiles_from_server(null);
+                }
                 failover = intent.getBooleanExtra("isFailover", false);
                 conn_on_mod = true;
                 this.conn_on_defined = true;
@@ -2019,9 +2022,8 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
     public void refresh_data(Integer promo_id) {
         new FetchPromosTask().execute();
 
-        // Load profiles from cache first for quick UI update
         ArrayList<Profile> cached_profiles = CacheHelper.readFromCache(this, "profiles.dat");
-        if (cached_profiles != null) {
+        if (cached_profiles != null && !cached_profiles.isEmpty()) {
             profile_list = new ProfileList();
             profile_list.addAll(cached_profiles);
             profile_list.sort();
@@ -2029,9 +2031,11 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
             Log.i(TAG, "Profiles loaded from cache for immediate display.");
         } else {
             profile_list = new ProfileList(); // Ensure profile_list is not null
+            fetch_profiles_from_server(promo_id);
         }
+    }
 
-        // Then fetch latest profiles from the server
+    private void fetch_profiles_from_server(Integer promo_id) {
         SharedPreferences login_prefs = getSharedPreferences(LoginActivity.PREFS_NAME, MODE_PRIVATE);
         String login_code = login_prefs.getString("login_code", null);
         if (login_code != null) {

@@ -28,18 +28,19 @@ public class CacheHelper {
     }
 
     public static <T> ArrayList<T> readFromCache(Context context, String fileName) {
-        try {
-            File cacheFile = new File(context.getCacheDir(), fileName);
-            if (cacheFile.exists()) {
-                FileInputStream fis = new FileInputStream(cacheFile);
-                ObjectInputStream ois = new ObjectInputStream(fis);
-                ArrayList<T> data = (ArrayList<T>) ois.readObject();
-                ois.close();
-                fis.close();
-                return data;
-            }
-        } catch (java.io.IOException | ClassNotFoundException e) {
-            Log.e(TAG, "Error reading from cache: " + fileName, e);
+        File cacheFile = new File(context.getCacheDir(), fileName);
+        if (!cacheFile.exists()) {
+            return null;
+        }
+
+        try (FileInputStream fis = new FileInputStream(cacheFile);
+             ObjectInputStream ois = new ObjectInputStream(fis)) {
+            @SuppressWarnings("unchecked")
+            ArrayList<T> data = (ArrayList<T>) ois.readObject();
+            return data;
+        } catch (java.io.IOException | ClassNotFoundException | ClassCastException e) {
+            Log.e(TAG, "Error reading from cache file, deleting: " + fileName, e);
+            cacheFile.delete();
         }
         return null;
     }
