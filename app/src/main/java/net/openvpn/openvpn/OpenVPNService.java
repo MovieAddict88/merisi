@@ -1315,9 +1315,10 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
         @Override
         protected void onPostExecute(ProfileList fetchedProfiles) {
             if (fetchedProfiles != null) {
-                profile_list = (ProfileList) CacheHelper.readFromCache(OpenVPNService.this, PROFILES_CACHE_FILE);
-                if (profile_list == null) {
-                    profile_list = new ProfileList();
+                ArrayList<Profile> cached_profiles = CacheHelper.readFromCache(OpenVPNService.this, PROFILES_CACHE_FILE);
+                profile_list = new ProfileList();
+                if (cached_profiles != null) {
+                    profile_list.addAll(cached_profiles);
                 }
 
                 updateLocalProfiles(fetchedProfiles);
@@ -2005,8 +2006,10 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
         new FetchPromosTask().execute();
 
         // Load profiles from cache first for quick UI update
-        profile_list = (ProfileList) CacheHelper.readFromCache(this, "profiles.dat");
-        if (profile_list != null) {
+        ArrayList<Profile> cached_profiles = CacheHelper.readFromCache(this, "profiles.dat");
+        if (cached_profiles != null) {
+            profile_list = new ProfileList();
+            profile_list.addAll(cached_profiles);
             profile_list.sort();
             gen_event(0, "UI_RESET", null, null, null);
             Log.i(TAG, "Profiles loaded from cache for immediate display.");
