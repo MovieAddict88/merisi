@@ -1321,17 +1321,18 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
                     profile_list.addAll(cached_profiles);
                 }
 
-                updateLocalProfiles(fetchedProfiles);
-
-                profile_list.sort();
-                gen_event(0, "UI_RESET", null, null, null);
-                Log.i(TAG, "Profiles reloaded successfully.");
+                if (updateLocalProfiles(fetchedProfiles)) {
+                    profile_list.sort();
+                    gen_event(0, "UI_RESET", null, null, null);
+                    Log.i(TAG, "Profiles reloaded successfully.");
+                }
             } else {
                 Log.e(TAG, "Failed to fetch profiles, result is null or invalid.");
             }
         }
 
-        private void updateLocalProfiles(ProfileList fetchedProfiles) {
+        private boolean updateLocalProfiles(ProfileList fetchedProfiles) {
+            boolean changed = false;
             // Create a map of fetched profiles for efficient lookup
             HashMap<String, Profile> fetchedProfilesMap = new HashMap<>();
             for (Profile p : fetchedProfiles) {
@@ -1344,6 +1345,7 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
                 Profile localProfile = iterator.next();
                 if (!fetchedProfilesMap.containsKey(localProfile.get_name())) {
                     iterator.remove();
+                    changed = true;
                     // Also delete the .ovpn file
                     File file = new File(getFilesDir(), localProfile.get_filename());
                     if (file.exists()) {
@@ -1357,19 +1359,31 @@ public class OpenVPNService extends VpnService implements Callback, net.openvpn.
                 Profile localProfile = profile_list.get_profile_by_name(fetchedProfile.get_name());
                 if (localProfile != null) {
                     // Update existing profile
-                    localProfile.id = fetchedProfile.id;
-                    localProfile.profile_type = fetchedProfile.get_profile_type();
-                    localProfile.icon_path = fetchedProfile.get_icon_path();
-                    localProfile.set_ping(fetchedProfile.get_ping());
-                    localProfile.signal_strength = fetchedProfile.get_signal_strength();
+                    if (localProfile.id != fetchedProfile.id ||
+                        !localProfile.get_profile_type().equals(fetchedProfile.get_profile_type()) ||
+                        (localProfile.get_icon_path() != null && !localProfile.get_icon_path().equals(fetchedProfile.get_icon_path())) ||
+                        localProfile.get_ping() != fetchedProfile.get_ping() ||
+                        localProfile.signal_strength != fetchedProfile.get_signal_strength()) {
+
+                        localProfile.id = fetchedProfile.id;
+                        localProfile.profile_type = fetchedProfile.get_profile_type();
+                        localProfile.icon_path = fetchedProfile.get_icon_path();
+                        localProfile.set_ping(fetchedProfile.get_ping());
+                        localProfile.signal_strength = fetchedProfile.get_signal_strength();
+                        changed = true;
+                    }
                 } else {
                     // Add new profile
                     profile_list.add(fetchedProfile);
+                    changed = true;
                 }
             }
 
             // Save updated profile list to cache
-            CacheHelper.saveToCache(OpenVPNService.this, PROFILES_CACHE_FILE, profile_list);
+            if (changed) {
+                CacheHelper.saveToCache(OpenVPNService.this, PROFILES_CACHE_FILE, profile_list);
+            }
+            return changed;
         }
     }
 
