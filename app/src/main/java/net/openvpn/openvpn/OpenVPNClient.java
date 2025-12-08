@@ -1095,7 +1095,7 @@ public class OpenVPNClient extends OpenVPNClientBase implements OnClickListener,
                 premium_freemium_button.setText("Freemium");
             }
 
-            ui_setup(is_active(), UIF_RESET, null);
+            mBoundService.refresh_data(null);
         }
     }
 
